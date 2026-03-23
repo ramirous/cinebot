@@ -1,0 +1,13 @@
+[Unit]
+Description=CineBot - Telegram to qBittorrent
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/cine_bot
+ExecStart=/opt/cine_bot/venv/bin/python bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
