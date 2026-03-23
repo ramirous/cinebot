@@ -5,6 +5,10 @@
 set -e
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; BLUE='\033[0;34m'; NC='\033[0m'
+# If not root, use sudo; if root, run directly
+SUDO=""
+[[ "$EUID" -ne 0 ]] && SUDO="sudo"
+
 ok()    { echo -e "${GREEN}✓ $1${NC}"; }
 warn()  { echo -e "${YELLOW}⚠ $1${NC}"; }
 err()   { echo -e "${RED}✗ $1${NC}"; exit 1; }
@@ -29,7 +33,7 @@ if command -v python3 &>/dev/null; then
 else
     warn "Instalando Python 3..."
     if [[ "$OS" == "linux" ]]; then
-        sudo apt update -qq && sudo apt install -y python3 python3-venv python3-pip
+        apt update -qq && apt install -y python3 python3-venv python3-pip
     else
         command -v brew &>/dev/null && brew install python3 || err "Instala Homebrew: https://brew.sh"
     fi
@@ -42,7 +46,7 @@ if command -v mkvmerge &>/dev/null; then
     ok "mkvmerge ya instalado"
 else
     warn "Instalando mkvtoolnix..."
-    if [[ "$OS" == "linux" ]]; then sudo apt install -y mkvtoolnix
+    if [[ "$OS" == "linux" ]]; then apt install -y mkvtoolnix
     else brew install mkvtoolnix; fi
     ok "mkvtoolnix instalado"
 fi
@@ -54,7 +58,7 @@ if command -v qbittorrent-nox &>/dev/null || command -v qbittorrent &>/dev/null;
 else
     warn "Instalando qbittorrent-nox..."
     if [[ "$OS" == "linux" ]]; then
-        sudo apt install -y qbittorrent-nox
+        apt install -y qbittorrent-nox
         cat > /tmp/qbt.service << EOF
 [Unit]
 Description=qBittorrent-nox
@@ -67,8 +71,8 @@ Restart=on-failure
 [Install]
 WantedBy=multi-user.target
 EOF
-        sudo cp /tmp/qbt.service /etc/systemd/system/qbittorrent.service
-        sudo systemctl daemon-reload && sudo systemctl enable qbittorrent && sudo systemctl start qbittorrent
+        cp /tmp/qbt.service /etc/systemd/system/qbittorrent.service
+        systemctl daemon-reload && systemctl enable qbittorrent && systemctl start qbittorrent
         ok "qbittorrent-nox instalado y arrancado"
         info "Web UI: http://localhost:8080  |  usuario: admin  |  pass: adminadmin"
         warn "Cambia la contraseña antes de continuar"
@@ -88,10 +92,10 @@ elif [[ "$OS" == "linux" ]]; then
     JTMP=$(mktemp -d)
     JVER=$(curl -s https://api.github.com/repos/Jackett/Jackett/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
     curl -sL "https://github.com/Jackett/Jackett/releases/download/${JVER}/Jackett.Binaries.LinuxAMDx64.tar.gz" -o "$JTMP/jackett.tar.gz"
-    sudo tar -xzf "$JTMP/jackett.tar.gz" -C /opt/
-    sudo mv /opt/Jackett* /opt/Jackett 2>/dev/null || true
-    cd /opt/Jackett && sudo ./install_service_systemd.sh
-    sudo systemctl enable jackett && sudo systemctl start jackett
+    tar -xzf "$JTMP/jackett.tar.gz" -C /opt/
+    mv /opt/Jackett* /opt/Jackett 2>/dev/null || true
+    cd /opt/Jackett && $SUDO ./install_service_systemd.sh
+    systemctl enable jackett && systemctl start jackett
     ok "Jackett instalado — agrega indexers en http://localhost:9117"
 else
     warn "Instala Jackett desde: https://github.com/Jackett/Jackett/releases"
@@ -105,7 +109,7 @@ INSTALL_DIR="/opt/cine_bot"
 [[ "$OS" == "mac" ]] && INSTALL_DIR="$HOME/cine_bot"
 ask "¿Dónde instalar? [Enter = $INSTALL_DIR]:"; read -r INPUT_DIR
 [[ -n "$INPUT_DIR" ]] && INSTALL_DIR="$INPUT_DIR"
-sudo mkdir -p "$INSTALL_DIR" && sudo chown "$USER":"$USER" "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR" && chown "$USER":"$USER" "$INSTALL_DIR"
 cp -r "$SCRIPT_DIR"/. "$INSTALL_DIR/" && cd "$INSTALL_DIR"
 ok "Archivos copiados a $INSTALL_DIR"
 
@@ -139,7 +143,7 @@ collect_folders() {
         ask "Carpeta de $label #$i (Enter para terminar):"; read -r folder
         [[ -z "$folder" ]] && break
         folders+=("$folder")
-        mkdir -p "$folder" 2>/dev/null || sudo mkdir -p "$folder" 2>/dev/null || true
+        mkdir -p "$folder" 2>/dev/null || mkdir -p "$folder" 2>/dev/null || true
         ok "Agregada: $folder"; ((i++))
     done
     local result=""
@@ -196,8 +200,8 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
-    sudo cp /tmp/cine_bot.service /etc/systemd/system/cine_bot.service
-    sudo systemctl daemon-reload && sudo systemctl enable cine_bot && sudo systemctl start cine_bot
+    cp /tmp/cine_bot.service /etc/systemd/system/cine_bot.service
+    systemctl daemon-reload && systemctl enable cine_bot && systemctl start cine_bot
     ok "Servicio cine_bot instalado y arrancado"
 fi
 
@@ -208,7 +212,7 @@ ok "CineBot está corriendo"
 echo ""
 if [[ "$OS" == "linux" ]]; then
     echo "  Ver logs:    journalctl -u cine_bot -f"
-    echo "  Reiniciar:   sudo systemctl restart cine_bot"
+    echo "  Reiniciar:   systemctl restart cine_bot"
 else
     echo "  Iniciar:     cd $INSTALL_DIR && venv/bin/python bot.py"
 fi
