@@ -1,7 +1,0 @@
-config.py
-allowed_users.txt
-__pycache__/
-*.pyc
-venv/
-.env
-*.log
